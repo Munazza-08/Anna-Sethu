@@ -1,0 +1,10 @@
+/* ── Volunteer Dashboard Extra Styles ─────────────────────── */
+
+.active-delivery-card {
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  background: rgba(245, 158, 11, 0.04) !important;
+}
+
+.active-delivery-card:hover {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}

@@ -1,0 +1,301 @@
+/* ═══════════════════════════════════════════════════════════════
+   Anna Sethu — Global Design System
+   Theme: Peach Background · Olive Green · Maroon
+   Fonts: Playfair Display (headings) + Montserrat (body)
+═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── PEACH PALETTE (Backgrounds) ── */
+  --peach-50:      #FFF8F3;
+  --peach-100:     #FFE8D6;
+  --peach-200:     #FFDAB9;    /* classic peach */
+  --peach-300:     #FFC8A0;
+  --peach-400:     #FFB085;
+  --peach-500:     #F59A6A;
+  --peach-bg:      #FDEADE;    /* main page background */
+  --peach-card:    #FFF4EC;    /* card background */
+  --peach-surface: #FFE5CC;    /* slightly darker surface */
+
+  /* ── MAROON PALETTE (Primary font/accent) ── */
+  --maroon-50:     #FDF2F2;
+  --maroon-100:    #F8D7D7;
+  --maroon-200:    #EFA0A0;
+  --maroon-400:    #C05050;
+  --maroon-500:    #8B1A1A;    /* core maroon */
+  --maroon-600:    #6F1414;
+  --maroon-700:    #560F0F;
+  --maroon-800:    #3D0A0A;
+  --maroon-glow:   rgba(139, 26, 26, 0.15);
+  --maroon-border: rgba(139, 26, 26, 0.28);
+
+  /* ── OLIVE GREEN PALETTE (Secondary font/accent) ── */
+  --olive-50:      #F5F5EC;
+  --olive-100:     #E8EDD0;
+  --olive-200:     #CDDBA0;
+  --olive-400:     #8CA84A;
+  --olive-500:     #6B7C3A;    /* core olive green */
+  --olive-600:     #556030;
+  --olive-700:     #404826;
+  --olive-800:     #2D3319;
+  --olive-glow:    rgba(107, 124, 58, 0.14);
+  --olive-border:  rgba(107, 124, 58, 0.28);
+
+  /* ── NEUTRAL WARMTH ── */
+  --white:         #FFFFFF;
+  --warm-white:    #FFFAF6;
+  --warm-100:      #F5EEE5;
+  --warm-200:      #E8DBCF;
+  --warm-300:      #D4C4B5;
+  --warm-400:      #B8A499;
+  --warm-500:      #8A7A6F;
+  --warm-700:      #4A3D35;
+  --warm-900:      #1E160F;
+
+  /* ── SEMANTIC ALIASES ── */
+  --color-bg:           var(--peach-bg);
+  --color-bg-alt:       var(--peach-100);
+  --color-bg-card:      var(--peach-card);
+  --color-surface:      var(--peach-surface);
+
+  --color-primary:      var(--maroon-500);   /* maroon = primary */
+  --color-primary-dark: var(--maroon-600);
+  --color-primary-soft: var(--maroon-100);
+
+  --color-secondary:      var(--olive-500);  /* olive = secondary */
+  --color-secondary-dark: var(--olive-600);
+  --color-secondary-soft: var(--olive-100);
+
+  --color-text-primary:   var(--warm-900);
+  --color-text-secondary: var(--warm-500);
+  --color-text-muted:     var(--warm-400);
+  --color-border:         var(--peach-300);
+  --color-border-dark:    var(--warm-300);
+
+  /* ── FONTS ── */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body:    'Montserrat', sans-serif;
+
+  /* ── SIZING ── */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   18px;
+  --radius-xl:   26px;
+  --radius-2xl:  36px;
+  --radius-full: 9999px;
+
+  /* ── SHADOWS (warm tinted) ── */
+  --shadow-xs:     0 2px 6px  rgba(139,  26,  26, 0.07);
+  --shadow-sm:     0 4px 14px rgba(139,  26,  26, 0.09);
+  --shadow-md:     0 10px 30px rgba(139, 26,  26, 0.10);
+  --shadow-lg:     0 20px 50px rgba(139, 26,  26, 0.12);
+  --shadow-maroon: 0 8px 28px rgba(139,  26,  26, 0.35);
+  --shadow-olive:  0 8px 28px rgba(107, 124,  58, 0.30);
+
+  /* ── TRANSITIONS ── */
+  --transition-fast:   140ms ease;
+  --transition-normal: 240ms ease;
+  --transition-slow:   400ms ease;
+
+  /* ── LAYOUT ── */
+  --max-width: 1200px;
+  --nav-height: 72px;
+}
+
+/* ── RESET ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+img, video { max-width: 100%; height: auto; display: block; }
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--font-body); cursor: pointer; border: none; outline: none; }
+ul, ol { list-style: none; }
+
+/* ── LAYOUT UTILITIES ──────────────────────────────────────── */
+.container { max-width: var(--max-width); margin: 0 auto; padding: 0 24px; }
+.section   { padding: 88px 0; }
+
+/* ── TYPOGRAPHY UTILITIES ──────────────────────────────────── */
+.text-maroon  { color: var(--maroon-500); }
+.text-olive   { color: var(--olive-500); }
+.text-peach   { color: var(--peach-400); }
+.text-muted   { color: var(--color-text-secondary); }
+.text-center  { text-align: center; }
+.font-display { font-family: var(--font-display); }
+
+/* Maroon → Olive gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--maroon-500) 0%, var(--olive-500) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── BUTTONS ───────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 30px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: all var(--transition-normal);
+  white-space: nowrap;
+  cursor: pointer;
+  border: 2.5px solid transparent;
+}
+
+/* Maroon primary button */
+.btn-primary {
+  background: var(--maroon-500);
+  color: var(--white);
+  border-color: var(--maroon-600);
+  box-shadow: var(--shadow-maroon);
+}
+.btn-primary:hover {
+  background: var(--maroon-600);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(139,26,26,0.42);
+}
+.btn-primary:active { transform: translateY(0); }
+
+/* Olive secondary button */
+.btn-secondary {
+  background: var(--olive-500);
+  color: var(--white);
+  border-color: var(--olive-600);
+  box-shadow: var(--shadow-olive);
+}
+.btn-secondary:hover {
+  background: var(--olive-600);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(107,124,58,0.38);
+}
+
+/* Outline maroon */
+.btn-outline {
+  background: transparent;
+  color: var(--maroon-500);
+  border-color: var(--maroon-500);
+}
+.btn-outline:hover {
+  background: var(--maroon-50);
+  transform: translateY(-2px);
+}
+
+/* Ghost (warm white) */
+.btn-ghost {
+  background: var(--warm-white);
+  color: var(--warm-700);
+  border-color: var(--warm-300);
+  box-shadow: var(--shadow-xs);
+}
+.btn-ghost:hover {
+  border-color: var(--olive-500);
+  color: var(--olive-600);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── CARD ──────────────────────────────────────────────────── */
+.card {
+  background: var(--peach-card);
+  border: 1.5px solid var(--peach-300);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--transition-normal);
+}
+.card:hover {
+  border-color: var(--maroon-border);
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── BADGE ─────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.badge-maroon {
+  background: var(--maroon-100);
+  border: 1.5px solid var(--maroon-border);
+  color: var(--maroon-600);
+}
+.badge-olive {
+  background: var(--olive-100);
+  border: 1.5px solid var(--olive-border);
+  color: var(--olive-700);
+}
+
+/* ── DIVIDER ───────────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; max-width: 56px; height: 2px; border-radius: 2px;
+}
+.divider::before { background: linear-gradient(90deg, transparent, var(--maroon-400)); }
+.divider::after  { background: linear-gradient(90deg, var(--olive-400), transparent); }
+.divider span { font-size: 1.2rem; }
+
+/* ── SCROLLBAR ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--peach-200); }
+::-webkit-scrollbar-thumb { background: var(--maroon-400); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--maroon-500); }
+
+/* ── SELECTION ─────────────────────────────────────────────── */
+::selection { background: var(--maroon-200); color: var(--maroon-700); }
+
+/* ── ANIMATIONS ────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+@keyframes pulse-maroon {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139,26,26,0.4); }
+  70%       { box-shadow: 0 0 0 8px rgba(139,26,26,0); }
+}
+@keyframes pulse-olive {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(107,124,58,0.4); }
+  70%       { box-shadow: 0 0 0 8px rgba(107,124,58,0); }
+}
+
+.animate-fadeInUp { animation: fadeInUp 0.65s ease forwards; }
+.animate-fadeIn   { animation: fadeIn   0.65s ease forwards; }
+
+.stagger > *:nth-child(1) { animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards; }
+.stagger > *:nth-child(2) { animation-delay: 0.17s; opacity: 0; animation-fill-mode: forwards; }
+.stagger > *:nth-child(3) { animation-delay: 0.30s; opacity: 0; animation-fill-mode: forwards; }
+.stagger > *:nth-child(4) { animation-delay: 0.43s; opacity: 0; animation-fill-mode: forwards; }
