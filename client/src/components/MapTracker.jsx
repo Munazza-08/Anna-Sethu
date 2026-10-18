@@ -36,9 +36,11 @@ export default function MapTracker({
   const watchId   = useRef(null);
   const [routeInfo, setRouteInfo]   = useState(null);
   const [myLoc,     setMyLoc]       = useState(null);
-  const [volPos,    setVolPos]       = useState(
-    volunteerLat && volunteerLng ? { lat: volunteerLat, lng: volunteerLng } : null
-  );
+  const [volPos, setVolPos] = useState(
+  volunteerLat != null && volunteerLng != null
+    ? { lat: volunteerLat, lng: volunteerLng }
+    : null
+);
 
   // ── Init Leaflet map ────────────────────────────────────────────
   useEffect(() => {
@@ -126,7 +128,15 @@ export default function MapTracker({
       if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
     };
   }, []);
+// ── Sync volunteer coordinates from props ──────────────────────
+  useEffect(() => {
+    if (volunteerLat == null || volunteerLng == null) return;
 
+    setVolPos({
+      lat: volunteerLat,
+      lng: volunteerLng,
+    });
+  }, [volunteerLat, volunteerLng]);
   // ── Update route whenever positions change ───────────────────────
   useEffect(() => {
     const vLat = isVolunteer ? myLoc?.lat  : (volPos?.lat  || volunteerLat);

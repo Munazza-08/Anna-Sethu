@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {io} from "socket.io-client";
 import {
   getNearbyRequests, getMyDeliveries, getDeliveryHistory,
   getCoupons, acceptRequest, completeDelivery
@@ -123,19 +124,68 @@ function NearbyRequestsTab() {
   };
 
   const handleAccept = async (req) => {
-    setAccepting(req._id);
-    try {
-      await acceptRequest(req._id);
-      toast.success('Request accepted! 🎉 Opening map...');
-      setActiveDelivery(req);
-      setRequests(prev => prev.filter(r => r._id !== req._id));
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to accept');
-    } finally {
-      setAccepting(null);
-    }
-  };
+  setAccepting(req._id);
 
+  try {
+    const { data } = await acceptRequest(req._id);
+
+    const acceptedRequest = data.foodRequest || req;
+
+    setActiveDelivery(acceptedRequest);
+    setRequests(prev => prev.filter(r => r._id !== req._id));
+
+    toast.success('Request accepted! Starting live location sharing.');
+  } catch (err) {
+    toast.error(
+      err.response?.data?.message || 'Failed to accept'
+    );
+  } finally {
+    setAccepting(null);
+  }
+};
+useEffect(() => {
+  if (!activeDelivery?._id) return;
+
+  let watchId;
+
+  const socket = io('http://localhost:5000');
+  const requestId = String(activeDelivery._id);
+
+  socket.on('connect', () => {
+    console.log('Connected for live tracking');
+  });
+
+  if (!navigator.geolocation) {
+    toast.error('Your browser does not support GPS location');
+  } else {
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        socket.emit('volunteer-location', {
+          requestId,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
+      (err) => {
+        console.error('GPS error:', err.message);
+        toast.error('Please allow location access to share GPS');
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 15000,
+      }
+    );
+  }
+
+  return () => {
+    if (watchId !== undefined) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+
+    socket.disconnect();
+  };
+}, [activeDelivery?._id]);
   // Get pickup coords from request
   const getPickupCoords = (req) => {
     const coords = req.pickupLocation?.coordinates;

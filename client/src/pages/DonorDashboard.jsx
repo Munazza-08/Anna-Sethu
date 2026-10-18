@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import {io} from "socket.io-client";
 import {
   getMyRequests, getCertificates, createFoodRequest
 } from '../services/api';
@@ -243,6 +244,38 @@ function DonationHistoryTab() {
   const [loading, setLoading]     = useState(true);
   const [mapRequest, setMapRequest] = useState(null); // open full map for this request
   const { user } = useAuth();
+  const [volunteerLocation,setVolunteerLocation]=useState(null);
+  const [trackingRequestId,setTrackingRequestId]=useState(null);
+  useEffect(() => {
+  if (!mapRequest?._id) return;
+
+  const socket = io('http://localhost:5000');
+  const requestId = String(mapRequest._id);
+
+  setTrackingRequestId(requestId);
+  setVolunteerLocation(null);
+
+  socket.on('connect', () => {
+    socket.emit('join-tracking-room', { requestId });
+  });
+
+  socket.on('volunteer-location-update', (location) => {
+    if (String(location.requestId) === requestId) {
+      setVolunteerLocation({
+        lat: location.lat,
+        lng: location.lng,
+      });
+    }
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('Tracking connection error:', error.message);
+  });
+
+  return () => {
+    socket.disconnect();
+  };
+}, [mapRequest?._id]);
 
   useEffect(() => {
     getMyRequests().then(({ data }) => { setRequests(data.requests); setLoading(false); }).catch(() => setLoading(false));
@@ -264,16 +297,20 @@ function DonationHistoryTab() {
       {/* Full-screen map when Track is clicked */}
       {mapRequest && (
         <MapTracker
-          requestTitle={mapRequest.title}
-          donorLat={getDonorCoords(mapRequest)?.lat}
-          donorLng={getDonorCoords(mapRequest)?.lng}
-          volunteerLat={mapRequest.volunteerLocation?.lat || null}
-          volunteerLng={mapRequest.volunteerLocation?.lng || null}
-          volunteerName={mapRequest.volunteer?.name || 'Volunteer'}
-          status={mapRequest.status}
-          onClose={() => setMapRequest(null)}
-          isVolunteer={false}
-        />
+  requestTitle={mapRequest.title}
+  donorLat={getDonorCoords(mapRequest)?.lat}
+  donorLng={getDonorCoords(mapRequest)?.lng}
+  volunteerLat={volunteerLocation?.lat ?? mapRequest.volunteerLocation?.lat ?? null}
+  volunteerLng={volunteerLocation?.lng ?? mapRequest.volunteerLocation?.lng ?? null}
+  volunteerName={mapRequest.volunteer?.name || 'Volunteer'}
+  status={mapRequest.status}
+  onClose={() => {
+    setMapRequest(null);
+    setVolunteerLocation(null);
+    setTrackingRequestId(null);
+  }}
+  isVolunteer={false}
+/>
       )}
 
       <h3 className="section-title">Your Food Requests</h3>

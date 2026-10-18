@@ -6,6 +6,7 @@ import Auth from './pages/Auth'
 import DonorDashboard from './pages/DonorDashboard'
 import VolunteerDashboard from './pages/VolunteerDashboard'
 import './App.css'
+import LiveLocationMap from "./LiveLocationMap";
 
 // Protected Route: redirects to /auth if not logged in
 function ProtectedRoute({ children, role }) {
@@ -43,6 +44,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/test-map"
+        element={<LiveLocationMap />}
+        />
         <Route
           path="/donor-dashboard"
           element={

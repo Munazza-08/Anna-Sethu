@@ -34,15 +34,44 @@ app.set('io', io);
 io.on('connection', (socket) => {
   console.log(`🔌 Socket connected: ${socket.id}`);
 
-  // Donor joins a room to receive updates about their requests
+  // Donor joins their personal room
   socket.on('join-donor-room', (donorId) => {
+    if (typeof donorId !== 'string' || !donorId.trim()) return;
+
     socket.join(`donor-${donorId}`);
     console.log(`🏠 Donor ${donorId} joined room`);
   });
 
-  // Volunteer broadcasts live location to the donor watching the request
-  socket.on('volunteer-location', ({ donorId, lat, lng, requestId }) => {
-    io.to(`donor-${donorId}`).emit('volunteer-location-update', { lat, lng, requestId });
+  // Donor joins the tracking room for a particular food request
+  socket.on('join-tracking-room', ({ requestId } = {}) => {
+    if (typeof requestId !== 'string' || !requestId.trim()) return;
+
+    socket.join(`tracking-${requestId}`);
+    console.log(`📍 Tracking request ${requestId}`);
+  });
+
+  // Volunteer sends GPS coordinates for a request
+  socket.on('volunteer-location', ({ requestId, lat, lng } = {}) => {
+    if (
+      typeof requestId !== 'string' ||
+      !requestId.trim() ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      lat < -90 || lat > 90 ||
+      lng < -180 || lng > 180
+    ) {
+      return;
+    }
+
+    io.to(`tracking-${requestId}`).emit(
+      'volunteer-location-update',
+      {
+        requestId,
+        lat,
+        lng,
+        updatedAt: Date.now()
+      }
+    );
   });
 
   socket.on('disconnect', () => {
