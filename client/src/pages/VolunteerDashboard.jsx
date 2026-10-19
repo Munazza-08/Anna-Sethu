@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import {io} from "socket.io-client";
 import {
   getNearbyRequests, getMyDeliveries, getDeliveryHistory,
-  getCoupons, acceptRequest, completeDelivery
+  getCoupons, redeemCoupon, acceptRequest, completeDelivery
 } from '../services/api';
 import MapTracker from '../components/MapTracker';
+import ReportIssueButton from '../components/ReportIssueButton';
 import toast from 'react-hot-toast';
 import './DonorDashboard.css';
 import './VolunteerDashboard.css';
@@ -58,7 +59,7 @@ function VolProfileTab({ user, setUser }) {
         </div>
         <div className="stat-card">
           <div className="stat-icon">⭐</div>
-          <div className="stat-num">{Math.round((user?.totalDeliveries || 0) * 4.8) || 0}</div>
+          <div className="stat-num">{user?.points || 0}</div>
           <div className="stat-label">Impact Points</div>
         </div>
       </div>
@@ -87,7 +88,7 @@ function VolProfileTab({ user, setUser }) {
 }
 
 // ── Nearby Requests Tab ───────────────────────────────────────────
-function NearbyRequestsTab() {
+function NearbyRequestsTab({ addTrackedRequest }) {
   const [requests, setRequests] = useState([]);
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -132,6 +133,7 @@ function NearbyRequestsTab() {
     const acceptedRequest = data.foodRequest || req;
 
     setActiveDelivery(acceptedRequest);
+    addTrackedRequest(acceptedRequest._id);
     setRequests(prev => prev.filter(r => r._id !== req._id));
 
     toast.success('Request accepted! Starting live location sharing.');
@@ -143,49 +145,6 @@ function NearbyRequestsTab() {
     setAccepting(null);
   }
 };
-useEffect(() => {
-  if (!activeDelivery?._id) return;
-
-  let watchId;
-
-  const socket = io('http://localhost:5000');
-  const requestId = String(activeDelivery._id);
-
-  socket.on('connect', () => {
-    console.log('Connected for live tracking');
-  });
-
-  if (!navigator.geolocation) {
-    toast.error('Your browser does not support GPS location');
-  } else {
-    watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        socket.emit('volunteer-location', {
-          requestId,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
-      },
-      (err) => {
-        console.error('GPS error:', err.message);
-        toast.error('Please allow location access to share GPS');
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 3000,
-        timeout: 15000,
-      }
-    );
-  }
-
-  return () => {
-    if (watchId !== undefined) {
-      navigator.geolocation.clearWatch(watchId);
-    }
-
-    socket.disconnect();
-  };
-}, [activeDelivery?._id]);
   // Get pickup coords from request
   const getPickupCoords = (req) => {
     const coords = req.pickupLocation?.coordinates;
@@ -281,7 +240,7 @@ function DeliveryHistoryTab() {
   const [completing, setCompleting] = useState(null);
   const [proofFile, setProofFile] = useState({});
   const [navRequest, setNavRequest] = useState(null);
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
 
   const getPickupCoords = (req) => {
     const coords = req?.pickupLocation?.coordinates;
@@ -304,7 +263,8 @@ function DeliveryHistoryTab() {
       if (proofFile[reqId]) fd.append('proof', proofFile[reqId]);
       fd.append('notes', 'Delivered successfully');
       const { data } = await completeDelivery(reqId, fd);
-      toast.success(`Delivered! 🎉 Coupon: ${data.couponCode}`);
+      setUser(current => current ? { ...current, points: data.points, totalDeliveries: (current.totalDeliveries || 0) + 1 } : current);
+      toast.success(`Delivered! 🎉 You earned 5 points. You now have ${data.points} points.`);
       setMyRequests(prev => prev.filter(r => r._id !== reqId));
     } catch {
       toast.error('Failed to mark as delivered');
@@ -371,6 +331,7 @@ function DeliveryHistoryTab() {
                       >
                         {completing === req._id ? <><span className="spinner-sm"/> Saving...</> : '✅ Mark Delivered'}
                       </button>
+                      <ReportIssueButton foodRequestId={req._id} />
                     </div>
                   </div>
                 </div>
@@ -404,6 +365,7 @@ function DeliveryHistoryTab() {
                 {del.couponCode && (
                   <div className="delivery-coupon" style={{ marginTop: 8 }}>🎟️ {del.couponCode}</div>
                 )}
+                {del.foodRequest?._id && <ReportIssueButton foodRequestId={del.foodRequest._id} />}
               </div>
             </div>
           ))}
@@ -417,46 +379,132 @@ function DeliveryHistoryTab() {
 // ── Coupons Tab ───────────────────────────────────────────────────
 function CouponsTab() {
   const [coupons, setCoupons] = useState([]);
+  const [redemptions, setRedemptions] = useState([]);
+  const [points, setPoints] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(null);
+  const { setUser } = useAuth();
 
-  useEffect(() => {
-    getCoupons().then(({ data }) => { setCoupons(data.coupons); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
+  const loadCoupons = () => getCoupons().then(({ data }) => {
+    setCoupons(data.coupons);
+    setRedemptions(data.redemptions);
+    setPoints(data.points);
+    setLoading(false);
+  }).catch(() => setLoading(false));
+
+  useEffect(() => { loadCoupons(); }, []);
+
+  const claimCoupon = async (couponId) => {
+    setClaiming(couponId);
+    try {
+      const { data } = await redeemCoupon(couponId);
+      setPoints(data.points);
+      setUser(current => current ? { ...current, points: data.points, couponsEarned: data.couponsEarned } : current);
+      toast.success(`Coupon claimed! ${data.points} points remaining.`);
+      await loadCoupons();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Could not claim coupon');
+    } finally {
+      setClaiming(null);
+    }
+  };
 
   if (loading) return <div className="loading-state"><span className="spinner-lg"/> Loading coupons...</div>;
 
   return (
     <div className="tab-content">
-      <h3 className="section-title">🎟️ Your Earned Coupons</h3>
+      <h3 className="section-title">🎟️ Volunteer Coupons</h3>
+      <div className="coupon-points-panel">
+        <strong>⭐ {points} points</strong>
+        <span>{points >= 10 ? 'Choose one coupon to claim. Each claim uses 10 points.' : `You need ${10 - points} more points to unlock a coupon.`}</span>
+      </div>
       {coupons.length === 0 ? (
         <div className="empty-state">
           <span>🎟️</span>
-          <p>Complete deliveries to earn reward coupons!</p>
+          <p>No coupons are available yet. Check back later!</p>
         </div>
       ) : (
         <div className="coupons-grid">
-          {coupons.map(c => (
-            <div key={c._id} className="coupon-card">
+          {coupons.map(c => {
+            const expired = c.expiresAt && new Date(c.expiresAt).getTime() <= Date.now();
+            const full = c.usageLimit != null && c.claimedCount >= c.usageLimit;
+            const available = !expired && !full;
+            return (
+              <div key={c._id} className="coupon-card">
               <div className="coupon-icon">🎟️</div>
               <div>
-                <div className="coupon-code">{c.couponCode}</div>
-                <div className="coupon-sub">
-                  Earned on {new Date(c.deliveredAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </div>
+                <div className="coupon-code">{c.title}</div>
+                <div className="coupon-sub">{c.description || 'Use your points to claim this coupon.'}</div>
+                <div className="coupon-sub">{expired ? 'Expired' : full ? 'Fully claimed' : 'Available'}{c.usageLimit != null ? ` · ${Math.max(0, c.usageLimit - c.claimedCount)} left` : ''}</div>
+                {c.expiresAt && <div className="coupon-sub">Expires {new Date(c.expiresAt).toLocaleDateString()}</div>}
               </div>
-            </div>
-          ))}
+              <button className="track-btn" disabled={points < 10 || claiming !== null || !available} onClick={() => claimCoupon(c._id)}>
+                {claiming === c._id ? 'Claiming…' : expired ? 'Expired' : full ? 'Fully claimed' : points < 10 ? `Need ${10 - points} more points` : 'Claim for 10 points'}
+              </button>
+              </div>
+            );
+          })}
         </div>
       )}
+      {redemptions.length > 0 && <>
+        <h3 className="section-title" style={{ marginTop: 28 }}>Your Claimed Coupons</h3>
+        <div className="coupons-grid">
+          {redemptions.map(item => <div key={item._id} className="coupon-card">
+            <div className="coupon-icon">🎟️</div><div><div className="coupon-code">{item.couponTitle}</div>
+              <div className="coupon-sub">Code: <strong>{item.couponCode}</strong> · Claimed {new Date(item.redeemedAt).toLocaleDateString('en-IN')}</div></div>
+          </div>)}
+        </div>
+      </>}
     </div>
   );
 }
 
 // ── Main Volunteer Dashboard ──────────────────────────────────────
 export default function VolunteerDashboard() {
-  const { user, setUser, logout } = useAuth();
+  const { user, setUser, logout, token } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
+  const [trackedRequestIds, setTrackedRequestIds] = useState([]);
+  const addTrackedRequest = (requestId) => setTrackedRequestIds((ids) =>
+    ids.includes(String(requestId)) ? ids : [...ids, String(requestId)]
+  );
+
+  useEffect(() => {
+    if (user?.role !== 'volunteer') return;
+    getMyDeliveries().then(({ data }) => {
+      const activeIds = data.requests
+        .filter((request) => ['accepted', 'in_transit'].includes(request.status))
+        .map((request) => String(request._id));
+      setTrackedRequestIds((ids) => [...new Set([...ids, ...activeIds])]);
+    }).catch((error) => console.error('Could not load active deliveries for location sharing:', error));
+  }, [user?._id]);
+
+  useEffect(() => {
+    if (!token || user?.role !== 'volunteer' || trackedRequestIds.length === 0) return;
+    if (!navigator.geolocation) {
+      toast.error('Your browser does not support GPS location');
+      return;
+    }
+
+    const socket = io({ auth: { token } });
+    const watchId = navigator.geolocation.watchPosition(
+      ({ coords }) => trackedRequestIds.forEach((requestId) => socket.emit('volunteer-location', {
+        requestId,
+        lat: coords.latitude,
+        lng: coords.longitude,
+      })),
+      (error) => {
+        console.error('GPS error:', error.message);
+        toast.error('Allow location access to share your live location');
+      },
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      socket.disconnect();
+    };
+  }, [token, user?.role, trackedRequestIds]);
 
   useEffect(() => {
     if (!user) navigate('/auth');
@@ -505,7 +553,7 @@ export default function VolunteerDashboard() {
         </div>
 
         {activeTab === 'profile' && <VolProfileTab user={user} setUser={setUser} />}
-        {activeTab === 'nearby' && <NearbyRequestsTab />}
+        {activeTab === 'nearby' && <NearbyRequestsTab addTrackedRequest={addTrackedRequest} />}
         {activeTab === 'history' && <DeliveryHistoryTab />}
         {activeTab === 'coupons' && <CouponsTab />}
       </div>

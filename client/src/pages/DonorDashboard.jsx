@@ -6,6 +6,7 @@ import {
   getMyRequests, getCertificates, createFoodRequest
 } from '../services/api';
 import MapTracker from '../components/MapTracker';
+import ReportIssueButton from '../components/ReportIssueButton';
 import toast from 'react-hot-toast';
 import './DonorDashboard.css';
 
@@ -243,13 +244,13 @@ function DonationHistoryTab() {
   const [requests, setRequests]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [mapRequest, setMapRequest] = useState(null); // open full map for this request
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [volunteerLocation,setVolunteerLocation]=useState(null);
   const [trackingRequestId,setTrackingRequestId]=useState(null);
   useEffect(() => {
   if (!mapRequest?._id) return;
 
-  const socket = io('http://localhost:5000');
+  const socket = io({ auth: { token } });
   const requestId = String(mapRequest._id);
 
   setTrackingRequestId(requestId);
@@ -275,11 +276,26 @@ function DonationHistoryTab() {
   return () => {
     socket.disconnect();
   };
-}, [mapRequest?._id]);
+}, [mapRequest?._id, token]);
 
   useEffect(() => {
     getMyRequests().then(({ data }) => { setRequests(data.requests); setLoading(false); }).catch(() => setLoading(false));
   }, [user]);
+
+  useEffect(() => {
+    if (!user?._id) return;
+
+    const socket = io({ auth: { token } });
+    socket.on('connect', () => socket.emit('join-donor-room', String(user._id)));
+    socket.on('status-update', ({ status, foodRequest, proofImage }) => {
+      if (!foodRequest?._id) return;
+      setRequests(current => current.map(request => String(request._id) === String(foodRequest._id)
+        ? { ...request, status, proofImage: proofImage || request.proofImage || '' }
+        : request));
+    });
+
+    return () => socket.disconnect();
+  }, [user?._id, token]);
 
   const statusColor = { pending: '#f59e0b', accepted: '#3b82f6', in_transit: '#ff6b35', delivered: '#10b981', cancelled: '#ef4444' };
 
@@ -337,17 +353,26 @@ function DonationHistoryTab() {
                   <span>👥 {req.servings} servings</span>
                   <span>🍽️ {req.foodType}</span>
                 </div>
+                {req.status === 'delivered' && req.proofImage && (
+                  <div className="donor-delivery-proof">
+                    <strong>📸 Delivery proof</strong>
+                    <img src={`http://localhost:5000${req.proofImage}`} alt={`Delivery proof for ${req.title}`} />
+                  </div>
+                )}
                 {req.volunteer && (
                   <div className="req-volunteer">
                     <span>🚴 {req.volunteer.name}</span>
-                    <button
-                      className="track-btn"
-                      onClick={() => setMapRequest(req)}
-                    >
-                      📍 Track on Map
-                    </button>
+                    {req.status !== 'delivered' && (
+                      <button
+                        className="track-btn"
+                        onClick={() => setMapRequest(req)}
+                      >
+                        📍 Track on Map
+                      </button>
+                    )}
                   </div>
                 )}
+                <ReportIssueButton foodRequestId={req._id} />
                 <small className="req-date">{new Date(req.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</small>
               </div>
             </div>

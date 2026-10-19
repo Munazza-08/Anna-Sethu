@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const FoodRequest = require('../models/FoodRequest');
 const User = require('../models/User');
 const Certificate = require('../models/Certificate');
@@ -9,8 +10,10 @@ const Delivery = require('../models/Delivery');
 const { protect, donorOnly, volunteerOnly } = require('../middleware/auth');
 
 // Multer for food request image uploads
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
+  destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) =>
     cb(null, `food-${Date.now()}${path.extname(file.originalname)}`),
 });
@@ -96,7 +99,16 @@ router.get('/mine', protect, donorOnly, async (req, res) => {
     const requests = await FoodRequest.find({ donor: req.user._id })
       .populate('volunteer', 'name phone avatar')
       .sort({ createdAt: -1 });
-    res.json({ success: true, requests });
+    const deliveries = await Delivery.find({
+      donor: req.user._id,
+      foodRequest: { $in: requests.map(request => request._id) },
+    }).select('foodRequest proofImage');
+    const proofImages = new Map(deliveries.map(delivery => [String(delivery.foodRequest), delivery.proofImage]));
+    const requestsWithProof = requests.map(request => ({
+      ...request.toObject(),
+      proofImage: proofImages.get(String(request._id)) || '',
+    }));
+    res.json({ success: true, requests: requestsWithProof });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -178,9 +190,6 @@ router.patch('/:id/complete', protect, volunteerOnly, upload.single('proof'), as
     foodRequest.deliveredAt = new Date();
     await foodRequest.save();
 
-    // Generate coupon code
-    const couponCode = `ANNA-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
-
     // Create delivery record
     const delivery = await Delivery.create({
       volunteer: req.user._id,
@@ -188,19 +197,22 @@ router.patch('/:id/complete', protect, volunteerOnly, upload.single('proof'), as
       foodRequest: foodRequest._id,
       proofImage: req.file ? `/uploads/${req.file.filename}` : '',
       notes: req.body.notes || '',
-      couponAwarded: true,
-      couponCode,
+      couponAwarded: false,
     });
 
-    // Update volunteer stats
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: { totalDeliveries: 1, couponsEarned: 1 },
-    });
+    // Each completed delivery earns five points toward the volunteer's next coupon.
+    const volunteer = await User.findByIdAndUpdate(req.user._id, {
+      $inc: { totalDeliveries: 1, points: 5 },
+    }, { new: true }).select('points totalDeliveries');
 
     const io = req.app.get('io');
-    if (io) io.to(`donor-${foodRequest.donor}`).emit('status-update', { status: 'delivered', foodRequest });
+    if (io) io.to(`donor-${foodRequest.donor}`).emit('status-update', {
+      status: 'delivered',
+      foodRequest,
+      proofImage: delivery.proofImage,
+    });
 
-    res.json({ success: true, delivery, couponCode });
+    res.json({ success: true, delivery, points: volunteer.points, pointsEarned: 5 });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

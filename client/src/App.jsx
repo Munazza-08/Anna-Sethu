@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import Auth from './pages/Auth'
 import DonorDashboard from './pages/DonorDashboard'
 import VolunteerDashboard from './pages/VolunteerDashboard'
+import OperatorDashboard from './pages/OperatorDashboard'
 import './App.css'
 import LiveLocationMap from "./LiveLocationMap";
 
@@ -19,7 +20,7 @@ function ProtectedRoute({ children, role }) {
   )
   if (!user) return <Navigate to="/auth" replace />
   if (role && user.role !== role) {
-    return <Navigate to={user.role === 'donor' ? '/donor-dashboard' : '/volunteer-dashboard'} replace />
+    return <Navigate to={user.role === 'donor' ? '/donor-dashboard' : user.role === 'operator' ? '/operator-dashboard' : '/volunteer-dashboard'} replace />
   }
   return children
 }
@@ -63,6 +64,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/operator-dashboard" element={<ProtectedRoute role="operator"><OperatorDashboard /></ProtectedRoute>} />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

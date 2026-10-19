@@ -15,13 +15,37 @@ router.post('/register', async (req, res) => {
     if (!name || !email || !password || !role) {
       return res.status(400).json({ success: false, message: 'All fields required' });
     }
+    if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string' || typeof phone !== 'string') {
+      return res.status(400).json({ success: false, message: 'Enter valid registration details' });
+    }
+    if (!['donor', 'volunteer'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Choose a valid account type' });
+    }
 
-    const exists = await User.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailPattern = /^(?!.*\.\.)[A-Z0-9](?:[A-Z0-9._%+-]{0,62}[A-Z0-9])?@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z]{2,})+$/i;
+    if (!emailPattern.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email address' });
+    }
+
+    const phoneDigits = phone.replace(/\D/g, '');
+    const indianPhoneDigits = phoneDigits.startsWith('91') && phoneDigits.length === 12
+      ? phoneDigits.slice(2)
+      : phoneDigits;
+    if (!/^[6-9]\d{9}$/.test(indianPhoneDigits)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid 10-digit Indian phone number' });
+    }
+    if (name.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Name must contain at least 2 characters' });
+    }
+
+    const exists = await User.findOne({ email: normalizedEmail });
     if (exists) {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
-    const user = await User.create({ name, email, password, role, phone });
+    const normalizedPhone = `+91${indianPhoneDigits}`;
+    const user = await User.create({ name: name.trim(), email: normalizedEmail, password, role, phone: normalizedPhone });
 
     res.status(201).json({
       success: true,
@@ -35,6 +59,7 @@ router.post('/register', async (req, res) => {
         totalDonations: user.totalDonations,
         totalDeliveries: user.totalDeliveries,
         couponsEarned: user.couponsEarned,
+        points: user.points,
       },
     });
   } catch (err) {
@@ -55,7 +80,6 @@ router.post('/login', async (req, res) => {
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
-
     res.json({
       success: true,
       token: generateToken(user._id),
@@ -69,6 +93,7 @@ router.post('/login', async (req, res) => {
         totalDonations: user.totalDonations,
         totalDeliveries: user.totalDeliveries,
         couponsEarned: user.couponsEarned,
+        points: user.points,
         isAvailable: user.isAvailable,
       },
     });
