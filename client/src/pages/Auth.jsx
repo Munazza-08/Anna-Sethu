@@ -17,18 +17,36 @@ export default function Auth() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isLogin) {
+      const email = form.email.trim().toLowerCase();
+      const emailPattern = /^(?!.*\.\.)[a-z0-9](?:[a-z0-9._%+-]{0,62}[a-z0-9])?@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z]{2,})+$/i;
+      if (!emailPattern.test(email)) {
+        toast.error('Enter a valid email address');
+        return;
+      }
+      const digits = form.phone.replace(/\D/g, '');
+      const indianPhone = digits.startsWith('91') && digits.length === 12 ? digits.slice(2) : digits;
+      if (!/^[6-9]\d{9}$/.test(indianPhone)) {
+        toast.error('Enter a valid 10-digit Indian phone number');
+        return;
+      }
+      if (form.name.trim().length < 2) {
+        toast.error('Name must contain at least 2 characters');
+        return;
+      }
+    }
     setLoading(true);
     try {
       let res;
       if (isLogin) {
-        res = await login({ email: form.email, password: form.password });
+        res = await login({ email: form.email.trim().toLowerCase(), password: form.password });
       } else {
-        res = await register({ ...form, role });
+        res = await register({ ...form, name: form.name.trim(), email: form.email.trim().toLowerCase(), role });
       }
       const { token, user } = res.data;
       loginUser(user, token);
       toast.success(`Welcome, ${user.name}! 🎉`);
-      navigate(user.role === 'donor' ? '/donor-dashboard' : '/volunteer-dashboard');
+      navigate(user.role === 'donor' ? '/donor-dashboard' : user.role === 'operator' ? '/operator-dashboard' : '/volunteer-dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Something went wrong');
     } finally {
@@ -95,6 +113,9 @@ export default function Auth() {
                 placeholder="+91 98765 43210"
                 value={form.phone}
                 onChange={handleChange}
+                required
+                maxLength={16}
+                title="Enter a valid 10-digit Indian mobile number, optionally prefixed by +91"
               />
             </div>
           )}
@@ -122,7 +143,6 @@ export default function Auth() {
               required
             />
           </div>
-
           <button type="submit" className="auth-submit-btn" disabled={loading}>
             {loading ? <span className="spinner" /> : isLogin ? 'Sign In' : 'Create Account'}
           </button>

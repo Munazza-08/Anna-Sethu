@@ -13,6 +13,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/socket.io': {
+        target: 'ws://localhost:5000',
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
 })

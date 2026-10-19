@@ -34,4 +34,9 @@ const volunteerOnly = (req, res, next) => {
   return res.status(403).json({ success: false, message: 'Access restricted to volunteers only' });
 };
 
-module.exports = { protect, donorOnly, volunteerOnly };
+const operatorOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'operator') return next();
+  return res.status(403).json({ success: false, message: 'Access restricted to operators only' });
+};
+
+module.exports = { protect, donorOnly, volunteerOnly, operatorOnly };

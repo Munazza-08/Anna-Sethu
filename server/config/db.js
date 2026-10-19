@@ -5,21 +5,35 @@ const mongoose = require('mongoose');
  * The URI is loaded from the .env file to keep credentials secure.
  * This function is called once when the server starts.
  *
- * NOTE (Phase 1): If MongoDB is not running locally, we log a warning
- * but do NOT exit the process. The health API still works.
- * In production, change the WARNING to process.exit(1).
+ * The API depends on MongoDB, so connection failures must reach the caller
+ * and prevent the server from accepting requests.
  */
 const connectDB = async () => {
+  if (!process.env.MONGO_URI) {
+    throw new Error('MONGO_URI is not set. Add a valid MongoDB connection string to server/.env.');
+  }
+
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI);
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.warn(`⚠️  MongoDB not connected: ${error.message}`);
-    console.warn('   → Server continues. API routes that need DB will fail gracefully.');
-    console.warn('   → Start MongoDB locally or set MONGO_URI to an Atlas URI in .env');
-    // In Phase 2+ uncomment this to make DB connection required:
-    // process.exit(1);
+  console.error('MongoDB connection error:', error.message);
+
+  if (error.reason && error.reason.servers) {
+    for (const [address, server] of error.reason.servers) {
+      console.error('\nServer:', address);
+      console.error('Server error:', server.error?.message);
+      console.error('Error code:', server.error?.code);
+      console.error('Error name:', server.error?.name);
+    }
   }
+
+  throw new Error(
+    `MongoDB connection failed: ${error.message}`,
+    { cause: error }
+  );
+}
+
 };
 
 module.exports = connectDB;
