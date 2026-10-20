@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {io} from "socket.io-client";
+import { BACKEND_URL, backendAssetUrl } from '../services/backend';
 import {
   getMyRequests, getCertificates, createFoodRequest
 } from '../services/api';
@@ -10,8 +11,6 @@ import ReportIssueButton from '../components/ReportIssueButton';
 import toast from 'react-hot-toast';
 import './DonorDashboard.css';
 
-// Socket URL — used when real backend is connected
-// const SOCKET_URL = 'http://localhost:5000';
 
 // ── Tab Components ────────────────────────────────────────────────
 
@@ -250,7 +249,7 @@ function DonationHistoryTab() {
   useEffect(() => {
   if (!mapRequest?._id) return;
 
-  const socket = io({ auth: { token } });
+  const socket = io(BACKEND_URL, { auth: { token } });
   const requestId = String(mapRequest._id);
 
   setTrackingRequestId(requestId);
@@ -285,7 +284,7 @@ function DonationHistoryTab() {
   useEffect(() => {
     if (!user?._id) return;
 
-    const socket = io({ auth: { token } });
+    const socket = io(BACKEND_URL, { auth: { token } });
     socket.on('connect', () => socket.emit('join-donor-room', String(user._id)));
     socket.on('status-update', ({ status, foodRequest, proofImage }) => {
       if (!foodRequest?._id) return;
@@ -339,7 +338,7 @@ function DonationHistoryTab() {
         <div className="requests-grid">
           {requests.map(req => (
             <div key={req._id} className="request-card">
-              {req.image && <img src={`http://localhost:5000${req.image}`} alt={req.title} className="req-img" />}
+              {req.image && <img src={backendAssetUrl(req.image)} alt={req.title} className="req-img" />}
               <div className="req-body">
                 <div className="req-top">
                   <h4>{req.title}</h4>
@@ -356,7 +355,7 @@ function DonationHistoryTab() {
                 {req.status === 'delivered' && req.proofImage && (
                   <div className="donor-delivery-proof">
                     <strong>📸 Delivery proof</strong>
-                    <img src={`http://localhost:5000${req.proofImage}`} alt={`Delivery proof for ${req.title}`} />
+                    <img src={backendAssetUrl(req.proofImage)} alt={`Delivery proof for ${req.title}`} />
                   </div>
                 )}
                 {req.volunteer && (

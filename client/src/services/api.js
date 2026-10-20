@@ -1,4 +1,6 @@
-const API_BASE = '/api';
+import { BACKEND_URL } from './backend';
+
+const API_BASE = `${BACKEND_URL}/api`;
 
 async function request(path, { method = 'GET', body, auth = true } = {}) {
   const headers = {};
