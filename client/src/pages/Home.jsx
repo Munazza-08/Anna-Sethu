@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BACKEND_URL } from '../services/backend'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import './Home.css'
@@ -95,7 +96,7 @@ function Home() {
 
   /* Check backend health */
   useEffect(() => {
-    fetch('/api/health')
+    fetch(`${BACKEND_URL}/api/health`)
       .then(r => r.json())
       .then(data => setServerStatus(data))
       .catch(() => setServerStatus({ success: false, message: 'Backend not connected' }))

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {io} from "socket.io-client";
+import { BACKEND_URL, backendAssetUrl } from '../services/backend';
 import {
   getNearbyRequests, getMyDeliveries, getDeliveryHistory,
   getCoupons, redeemCoupon, acceptRequest, completeDelivery
@@ -12,7 +13,6 @@ import toast from 'react-hot-toast';
 import './DonorDashboard.css';
 import './VolunteerDashboard.css';
 
-// const SOCKET_URL = 'http://localhost:5000'; // enable when MongoDB is connected
 
 // ── Profile Tab ───────────────────────────────────────────────────
 function VolProfileTab({ user, setUser }) {
@@ -203,7 +203,7 @@ function NearbyRequestsTab({ addTrackedRequest }) {
         <div className="nearby-grid">
           {requests.map(req => (
             <div key={req._id} className="nearby-card">
-              {req.image && <img src={`http://localhost:5000${req.image}`} alt={req.title} />}
+              {req.image && <img src={backendAssetUrl(req.image)} alt={req.title} />}
               <div className="nearby-card-body">
                 <h4>{req.title}</h4>
                 <p>{req.description || 'No description'}</p>
@@ -352,7 +352,7 @@ function DeliveryHistoryTab() {
           {deliveries.map(del => (
             <div key={del._id} className="delivery-card">
               {del.proofImage
-                ? <img src={`http://localhost:5000${del.proofImage}`} alt="proof" className="delivery-proof" />
+                ? <img src={backendAssetUrl(del.proofImage)} alt="proof" className="delivery-proof" />
                 : <div className="delivery-no-proof">📦</div>
               }
               <div className="delivery-info">
@@ -486,7 +486,7 @@ export default function VolunteerDashboard() {
       return;
     }
 
-    const socket = io({ auth: { token } });
+    const socket = io(BACKEND_URL, { auth: { token } });
     const watchId = navigator.geolocation.watchPosition(
       ({ coords }) => trackedRequestIds.forEach((requestId) => socket.emit('volunteer-location', {
         requestId,

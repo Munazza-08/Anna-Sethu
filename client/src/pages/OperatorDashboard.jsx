@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { addCoupon, getCouponCatalog, getOperatorOverview, resolveIssueReport, toggleCoupon } from '../services/api';
+import { backendAssetUrl } from '../services/backend';
 import toast from 'react-hot-toast';
 import './DonorDashboard.css';
 
@@ -85,7 +86,7 @@ export default function OperatorDashboard() {
 
         {activeView === 'deliveries' && (overviewLoading ? <div className="loading-state">Loading deliveries...</div> : (overview?.deliveries || []).length === 0 ? <div className="empty-state"><span>📦</span><p>No deliveries recorded yet.</p></div> : <div className="operator-record-list">
           {overview.deliveries.map(delivery => <article className="profile-form-card operator-record" key={delivery._id}>
-            {delivery.proofImage && <img className="operator-proof" src={`http://localhost:5000${delivery.proofImage}`} alt="Delivery proof" />}
+            {delivery.proofImage && <img className="operator-proof" src={backendAssetUrl(delivery.proofImage)} alt="Delivery proof" />}
             <div><h3>{delivery.foodRequest?.title || 'Food delivery'}</h3><p>Volunteer: {delivery.volunteer?.name || '—'} ({delivery.volunteer?.email || '—'})</p><p>Donor: {delivery.donor?.name || '—'} ({delivery.donor?.email || '—'})</p><small>Delivered {new Date(delivery.deliveredAt).toLocaleString()}</small></div>
           </article>)}
         </div>)}
